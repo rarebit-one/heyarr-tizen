@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://rarebit.one/heyarr-tizen"
+        version="0.1.0"
+        viewmodes="maximized">
+  <!--
+    Heyarr Tizen TV/wall client. A credential-less television: it holds no
+    heyarr token and no device key, so it logs in by showing a Voidbind QR that
+    an enrolled phone approves (ADR-0053), then browses + plays over the
+    OpenSubsonic /rest compat surface. See README.md.
+
+    The application id below is <package>.<name>; the package is a 10-char Tizen
+    id assigned at build/sign time. `heyarrTV0A` is a placeholder dev package —
+    replace it (and re-sign) for a store submission.
+  -->
+  <tizen:application id="heyarrTV0A.HeyarrTV"
+                     package="heyarrTV0A"
+                     required_version="6.0"/>
+  <tizen:profile name="tv"/>
+
+  <name>Heyarr TV</name>
+  <description>Heyarr TV/wall client — QR sign-in and library playback.</description>
+  <author href="https://github.com/rarebit-one/heyarr-tizen">Rarebit One</author>
+  <license>AGPL-3.0-or-later</license>
+
+  <content src="index.html"/>
+  <icon src="icon.png"/>
+
+  <!--
+    The TV talks to the heyarr node over HTTPS: the Voidbind broker (/login),
+    the Subsonic /rest browse surface and the range-capable stream URL. Access
+    is opened to any origin because the server base URL is user-configured
+    (src/config.js); a store build should narrow this to the deployed origin.
+  -->
+  <access origin="*" subdomains="true"/>
+
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+
+  <!-- TV remote keys (Return/back, media transport) the player listens for. -->
+  <tizen:setting screen-orientation="landscape"
+                 context-menu="disable"
+                 background-support="disable"
+                 encryption="disable"
+                 install-location="auto"/>
+</widget>

@@ -1,0 +1,37 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The @rarebit-one/voidbind-web dependency is a PUBLIC git repo pinned by
+      # SHA. Force anonymous HTTPS for any git URL so `npm install` clones it
+      # without needing a credential (mirrors allthing-tizen's CI rewrite).
+      - name: Prefer anonymous HTTPS for git dependencies
+        run: |
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install
+        run: npm install
+
+      - name: Validate config.xml
+        run: npm run validate
+
+      - name: Test
+        run: npm test
+
+      # Prove the .wgt tree assembles and packages (vendors voidbind-web, zips).
+      - name: Build .wgt
+        run: npm run build

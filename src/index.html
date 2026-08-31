@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, height=1080, user-scalable=no">
+  <title>Heyarr TV</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Sign-in view: a Voidbind QR the viewer scans with an enrolled phone. -->
+  <section id="view-login" class="view">
+    <header class="brand"><h1>Heyarr TV</h1></header>
+    <div class="login-grid">
+      <div class="qr-panel">
+        <div id="qr" class="qr" role="img" aria-label="Voidbind login QR code"></div>
+        <p id="login-status" class="status">Ready to sign in.</p>
+        <p id="login-error" class="error" hidden></p>
+      </div>
+      <div class="login-form">
+        <label for="base-url">Heyarr server</label>
+        <input id="base-url" type="url" inputmode="url" autocomplete="off"
+               placeholder="https://heyarr.local">
+        <button id="sign-in" type="button">Sign in with QR</button>
+        <p class="hint">Scan the code with the phone that holds your Voidbind key.
+          No password is typed on the TV.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Library view: browse albums, open one for its tracks, play a stream. -->
+  <section id="view-library" class="view" hidden>
+    <header class="lib-header">
+      <h1>Library</h1>
+      <span id="who" class="who"></span>
+    </header>
+    <div class="lib-grid">
+      <nav class="albums" aria-label="Albums">
+        <h2>Albums</h2>
+        <ul id="album-list" class="album-list"></ul>
+      </nav>
+      <aside id="album-detail" class="album-detail" hidden>
+        <h2 id="album-title">Album</h2>
+        <ul id="song-list" class="song-list"></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Now-playing overlay: the authenticated /rest/stream URL in a player. -->
+  <div id="now-playing" class="now-playing" hidden>
+    <div class="np-bar">
+      <span id="np-title" class="np-title"></span>
+      <button id="np-close" type="button" class="np-close">Close</button>
+    </div>
+    <audio id="audio-player" class="player" controls hidden></audio>
+    <video id="video-player" class="player" controls hidden></video>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

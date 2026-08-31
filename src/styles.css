@@ -1,0 +1,77 @@
+/* Heyarr TV — a plain, remote-navigable 10-foot shell (Phase 1, not a full
+   10-foot UI). Dark ground, large type, a bright focus ring so the TV remote's
+   position is always obvious. */
+
+:root {
+  --bg: #0e0f13;
+  --panel: #191b22;
+  --panel-2: #22252f;
+  --fg: #f2f3f7;
+  --muted: #9aa0ad;
+  --accent: #5ac8fa;
+  --error: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; height: 100%;
+  background: var(--bg); color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.view { min-height: 100vh; padding: 4vh 5vw; }
+h1 { font-size: 3.2rem; margin: 0 0 2vh; }
+h2 { font-size: 1.8rem; margin: 0 0 1.5vh; color: var(--muted); }
+
+/* --- sign-in --- */
+.brand { text-align: center; }
+.login-grid { display: flex; gap: 6vw; align-items: center; justify-content: center; margin-top: 4vh; }
+.qr-panel { text-align: center; }
+.qr {
+  width: 360px; height: 360px; background: #fff; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.qr svg { width: 100%; height: 100%; }
+.status { font-size: 1.4rem; color: var(--muted); margin-top: 2vh; }
+.login-form { display: flex; flex-direction: column; gap: 1.5vh; max-width: 520px; }
+.login-form label { font-size: 1.2rem; color: var(--muted); }
+.login-form input {
+  font-size: 1.6rem; padding: 1rem 1.2rem; border-radius: 12px;
+  border: 2px solid var(--panel-2); background: var(--panel); color: var(--fg);
+}
+button {
+  font-size: 1.6rem; padding: 1rem 1.6rem; border-radius: 12px; border: none;
+  background: var(--accent); color: #05202b; font-weight: 700; cursor: pointer;
+}
+.hint { font-size: 1.1rem; color: var(--muted); }
+.error { color: var(--error); font-size: 1.3rem; }
+
+/* --- library --- */
+.lib-header { display: flex; align-items: baseline; gap: 2vw; }
+.who { color: var(--muted); font-size: 1.3rem; }
+.lib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; margin-top: 3vh; }
+.album-list, .song-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1vh; }
+
+.album, .song {
+  background: var(--panel); border-radius: 12px; padding: 1.4rem 1.6rem;
+  display: flex; flex-direction: column; gap: 0.3rem; cursor: pointer;
+  outline: none; transition: transform .08s ease;
+}
+.album:focus, .song:focus, button:focus, input:focus {
+  outline: 4px solid var(--accent); outline-offset: 2px; transform: scale(1.01);
+}
+.album-name, .song-title { font-size: 1.6rem; }
+.album-sub, .song-sub { font-size: 1.1rem; color: var(--muted); }
+.loading, .empty, .error { color: var(--muted); padding: 1rem; }
+.album-detail { background: var(--panel-2); border-radius: 16px; padding: 2rem; }
+
+/* --- now playing --- */
+.now-playing {
+  position: fixed; inset: 0; background: rgba(0,0,0,.92);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh;
+}
+.np-bar { display: flex; align-items: center; gap: 2vw; }
+.np-title { font-size: 1.8rem; }
+.player { width: 80vw; max-width: 1280px; }
+audio.player { width: 60vw; }

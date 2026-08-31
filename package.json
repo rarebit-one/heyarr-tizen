@@ -1,0 +1,25 @@
+{
+  "name": "heyarr-tizen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Heyarr Tizen TV/wall client (.wgt) — QR login via heyarr's weblogin.Broker, library browse + playback over the M11 Subsonic /rest compat surface, consuming @rarebit-one/voidbind-web. Sibling of heyarr-mobile.",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "author": "Rarebit One",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rarebit-one/heyarr-tizen.git"
+  },
+  "scripts": {
+    "validate": "node scripts/validate-config.mjs",
+    "build": "node scripts/build-wgt.mjs",
+    "pretest": "node scripts/validate-config.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@rarebit-one/voidbind-web": "git+https://github.com/rarebit-one/voidbind-web.git#a0f356eae968f4196f8afc34a130ca0232c9f4c5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
