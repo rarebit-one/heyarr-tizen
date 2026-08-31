@@ -17,6 +17,12 @@ export const DEFAULT_BASE_URL = 'https://heyarr.local';
 export const SUBSONIC_CLIENT = 'heyarr-tizen';
 export const SUBSONIC_API_VERSION = '1.16.1';
 
+// A stable client name for heyarr's native `/api/v1` surface (search + follow).
+// The sibling of SUBSONIC_CLIENT — the `/api/v1` calls do not put it on the wire
+// today, but keeping one name here means a future User-Agent/telemetry seam has
+// a single source of truth rather than a string littered across api.js.
+export const API_CLIENT = 'heyarr-tizen';
+
 const STORAGE_KEY = 'heyarr.baseUrl';
 
 // Read the configured base URL: a previously saved value wins, else the default.

@@ -38,23 +38,75 @@ does: it shows a Voidbind QR that an enrolled phone approves.
 3. **Play** — a selected track's `/rest/stream?id=…` URL (range-capable, 206,
    M10 progressive partial serving inherited from the blob handler) is set as
    an `<audio>`/`<video>` `src`.
+4. **Search + Follow** — [`src/api.js`](src/api.js) speaks heyarr's **native
+   `/api/v1`** surface (heyarr-core `internal/api/resources`, §55/M12) for the
+   two things the read-only Subsonic surface deliberately does not carry:
+   **source-agnostic search** (`POST /api/v1/search`) and **following a source**
+   (`POST` / `GET` / `DELETE /api/v1/followed-sources`). Unlike `/rest`, these
+   carry the QR session token as an **`Authorization: Bearer <token>`** header
+   (heyarr-core `auth.go`, ADR-0053) — see the finding below.
 
 The whole app is framework-free ESM with **no bundler and no CDN** (ADR-0001
 self-hosted): `voidbind-web` is vendored into the `.wgt` at build time.
 
+## Follow / Search (M12 Slice 5)
+
+The library view has three remote-navigable tabs: **Library** (the Subsonic
+browse), **Search**, and **Followed**.
+
+- **Search** — type a title; `POST /api/v1/search` returns matching library
+  works (`{ work_id, content_type, title, year? }`). Source-agnostic by design:
+  you say what a work *is*, never which indexer to ask.
+- **Follow** — a result's **Follow** button opens a small form. A followed
+  source needs a **feed identity** (a numeric TVDB series id, or a TVDB URL) on
+  top of the work; the server infers the type and, in **Phase 1, follows
+  `tv_series` only** — any other identity is refused with a message the form
+  surfaces verbatim.
+- **Followed** — `GET /api/v1/followed-sources` lists your subscriptions with
+  their health + archived counts; each has an **Unfollow** (`DELETE`, which
+  defaults to `keep_archive=true`).
+
+### ⚠️ Auth integration finding — reads work, writes are read-scoped (403)
+
+The QR web-login session token **is accepted on `/api/v1`**: heyarr-core's
+`authenticate` middleware (`internal/api/http/auth.go`) offers an
+otherwise-unrecognised bearer value to the web-login broker, so the **same
+token** the QR sign-in mints authenticates as a Bearer — **no 401**. But that
+session is minted **read-scoped** (`sessionIdentity` in
+`internal/api/http/session.go` grants `ScopeRead` only), and the `/api/v1`
+router requires at least `read` on every route. So, from a TV:
+
+| Route | Scope required | From a TV's QR session |
+|-------|----------------|------------------------|
+| `POST /api/v1/search` | read (floor) | ✅ **works** |
+| `GET /api/v1/followed-sources` | read (floor) | ✅ **works** |
+| `POST /api/v1/followed-sources` | **write** | ⛔ **403** (not 401) |
+| `DELETE /api/v1/followed-sources/{id}` | **write** | ⛔ **403** (not 401) |
+
+This is a **scope** gap, not a token-type gap: the credential is valid, it just
+lacks `write` (the device-credential path is read-scoped too — a TV is a
+read-only 10-foot consumption surface by design). All four routes are wired to
+the real contract and unit-tested (including the 403); the UI surfaces the 403
+**honestly** — "This TV is signed in read-only … follow from the phone app or an
+operator console" — rather than hiding a button that cannot work or faking a
+success. Search and the Followed list are fully functional from the TV today;
+Follow/Unfollow go live if/when heyarr issues a write-scoped credential to a TV
+(out of scope here — **we do not touch heyarr-core**).
+
 ## Scope (Phase-1 shell)
 
-This is a functional browse+play shell, **not** a full 10-foot UI. It gives you:
-QR sign-in, a remote-navigable album list, an album's track list, and a player
-pointed at the authenticated stream. A configurable server base URL
-([`src/config.js`](src/config.js), remembered in `localStorage`) is the one knob.
+This is a functional browse+play+discover shell, **not** a full 10-foot UI. It
+gives you: QR sign-in, a remote-navigable album list, an album's track list, a
+player pointed at the authenticated stream, and the Search/Follow/Followed tabs
+above. A configurable server base URL ([`src/config.js`](src/config.js),
+remembered in `localStorage`) is the one knob.
 
 ### Deferred (deliberately)
 
-- **The Follow button.** Following a source needs heyarr's native `/api/v1`
-  REST route from **M12 Slice 5**, which is not merged yet. The Subsonic compat
-  surface is read-only (no playlists/scrobbles/follows — those live in the
-  device-side Personal MCP), so Follow is out of scope until that route lands.
+- **Write-scoped follow from the TV.** See the auth finding above: Follow /
+  Unfollow are wired and tested but return 403 under the read-scoped QR session.
+  Making them live needs a write-scoped TV credential from heyarr-core, which is
+  its call to make — not this client's.
 - **Phone-as-controller cast / SSDP (#382).** The cast/second-screen model is
   being designed in heyarr-core's M12 track; building it here would race that
   work. This client is a direct player only. **We do not touch heyarr-core.**
