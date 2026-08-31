@@ -27,21 +27,74 @@
     </div>
   </section>
 
-  <!-- Library view: browse albums, open one for its tracks, play a stream. -->
+  <!-- Library view: browse albums, search + follow sources, manage follows. -->
   <section id="view-library" class="view" hidden>
     <header class="lib-header">
       <h1>Library</h1>
       <span id="who" class="who"></span>
     </header>
-    <div class="lib-grid">
-      <nav class="albums" aria-label="Albums">
-        <h2>Albums</h2>
-        <ul id="album-list" class="album-list"></ul>
-      </nav>
-      <aside id="album-detail" class="album-detail" hidden>
-        <h2 id="album-title">Album</h2>
-        <ul id="song-list" class="song-list"></ul>
-      </aside>
+
+    <!-- Tab bar: three remote-navigable sections of the shell. -->
+    <nav class="tabs" aria-label="Sections">
+      <button id="tab-library" type="button" class="tab" aria-selected="true">Library</button>
+      <button id="tab-search" type="button" class="tab" aria-selected="false">Search</button>
+      <button id="tab-followed" type="button" class="tab" aria-selected="false">Followed</button>
+    </nav>
+
+    <!-- Library panel: the Subsonic browse (albums → tracks → play). -->
+    <div id="panel-library" class="panel">
+      <div class="lib-grid">
+        <nav class="albums" aria-label="Albums">
+          <h2>Albums</h2>
+          <ul id="album-list" class="album-list"></ul>
+        </nav>
+        <aside id="album-detail" class="album-detail" hidden>
+          <h2 id="album-title">Album</h2>
+          <ul id="song-list" class="song-list"></ul>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Search panel: source-agnostic content search (POST /api/v1/search),
+         with a Follow action on a result (POST /api/v1/followed-sources). -->
+    <div id="panel-search" class="panel" hidden>
+      <div class="search-bar">
+        <label for="search-input">Search the library</label>
+        <input id="search-input" type="search" inputmode="search" autocomplete="off"
+               placeholder="a title — e.g. The Conversation">
+        <button id="search-go" type="button">Search</button>
+      </div>
+      <p id="search-status" class="status" hidden></p>
+      <ul id="search-results" class="result-list"></ul>
+
+      <!-- Inline follow form, revealed when a result's Follow is chosen. A
+           followed source needs a FEED identity (a TVDB series id or URL) on
+           top of the work — the server infers the type and, in Phase 1, follows
+           tv_series only. -->
+      <div id="follow-form" class="follow-form" hidden>
+        <h2 id="follow-form-title">Follow</h2>
+        <p class="hint">Phase 1 follows <strong>TV series</strong> only. Give the series'
+          <a href="https://thetvdb.com" tabindex="-1">TheTVDB</a> id (or a TVDB URL).</p>
+        <label for="follow-tvdb">TVDB series id or URL</label>
+        <input id="follow-tvdb" type="text" autocomplete="off" placeholder="e.g. 121361">
+        <label for="follow-quality">Quality profile (optional)</label>
+        <input id="follow-quality" type="text" autocomplete="off" placeholder="leave blank for the default">
+        <div class="follow-actions">
+          <button id="follow-confirm" type="button">Follow</button>
+          <button id="follow-cancel" type="button" class="secondary">Cancel</button>
+        </div>
+        <p id="follow-status" class="status" hidden></p>
+      </div>
+    </div>
+
+    <!-- Followed panel: the standing subscriptions (GET), each with unfollow. -->
+    <div id="panel-followed" class="panel" hidden>
+      <div class="panel-head">
+        <h2>Followed sources</h2>
+        <button id="followed-refresh" type="button" class="secondary">Refresh</button>
+      </div>
+      <p id="followed-status" class="status" hidden></p>
+      <ul id="followed-list" class="result-list"></ul>
     </div>
   </section>
 
