@@ -29,6 +29,7 @@ const state = {
   api: null,        // heyarr native /api/v1 client (search + follow)
   activeTab: 'library',
   followTarget: null, // the search result a pending Follow is about
+  canWrite: null,   // GET /session ⇒ can_write; null until read, false = read-only TV
 };
 
 // ---- sign-in view ----------------------------------------------------------
@@ -59,6 +60,12 @@ async function startLogin() {
     // The native /api/v1 client carries the SAME session token as a Bearer
     // header (heyarr-core auth.go accepts a web-login session as a bearer).
     state.api = makeApiClient({ baseUrl, token });
+    // Read this session's authority up front (best-effort) so the search/followed
+    // tabs can say "read-only" before a Follow attempt 403s, rather than only
+    // after. A shared TV is read-only by design (decision 1) — we report it.
+    state.api.session()
+      .then((s) => { state.canWrite = !!(s && s.can_write); })
+      .catch(() => { /* unknown authority → leave null, no proactive notice */ });
 
     await enterLibrary();
   } catch (err) {
@@ -166,7 +173,14 @@ function switchTab(name) {
     if (btn) btn.setAttribute('aria-selected', String(t === name));
     if (panel) panel.hidden = t !== name;
   });
-  if (name === 'search') { const i = $('search-input'); if (i) i.focus(); }
+  if (name === 'search') {
+    const i = $('search-input'); if (i) i.focus();
+    // Heads-up: a shared TV is signed in read-only, so Follow will be refused.
+    // Say so up front (decision 1: the TV stays read-only; follow from a phone).
+    if (state.canWrite === false) {
+      setSearchStatus('This TV is read-only — search works, but following needs an authorized device (your phone).');
+    }
+  }
   if (name === 'followed') { loadFollowed(); const b = $('followed-refresh'); if (b) b.focus(); }
 }
 
@@ -221,8 +235,14 @@ function openFollowForm(work) {
   const form = $('follow-form');
   if (!form) return;
   $('follow-form-title') && ($('follow-form-title').textContent = 'Follow: ' + (work.title || 'series'));
-  ['follow-tvdb', 'follow-quality'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
-  setFollowStatus('');
+  const quality = $('follow-quality'); if (quality) quality.value = '';
+  // Pre-fill the feed identity from the search hit when the server already knows
+  // it (WorkSummary.tvdb_id, heyarr-core PR #412) — a followed source needs a
+  // feed identity, and threading the one search already returned turns a follow
+  // from "type the TVDB id yourself" into a one-press confirm. Still editable, and
+  // still empty (prompting manual entry) for a hit the library has no stored id for.
+  const tvdbEl = $('follow-tvdb'); if (tvdbEl) tvdbEl.value = work.tvdb_id || '';
+  setFollowStatus(work.tvdb_id ? '' : 'No stored feed id for this result — enter a TVDB id or URL to follow.');
   form.hidden = false;
   const tvdb = $('follow-tvdb');
   if (tvdb) tvdb.focus();
