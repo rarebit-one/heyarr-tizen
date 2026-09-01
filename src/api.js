@@ -148,6 +148,17 @@ export function makeApiClient({ baseUrl, token, fetchImpl }) {
       const q = keepArchive ? '?keep_archive=true' : '?keep_archive=false';
       return request('DELETE', '/followed-sources/' + encodeURIComponent(id) + q);
     },
+
+    // This caller's own authority (GET /api/v1/session, heyarr-core session.go
+    // SessionView, ADR-0061). Read-floor, so it WORKS from the TV. Returns
+    // { kind, principal_id?, device_key?, scopes, can_write, management_authorized }.
+    // The TV reads can_write to tell the operator up front that this is a
+    // read-only surface, rather than only discovering it on a 403 after a Follow
+    // attempt. A shared TV stays read-only BY DESIGN — this reports the state, it
+    // is not a path to authorise the TV itself (that is the phone's job).
+    async session() {
+      return request('GET', '/session');
+    },
   };
 }
 
