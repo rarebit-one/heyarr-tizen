@@ -2,7 +2,7 @@
   "name": "heyarr-tizen",
   "version": "0.1.0",
   "private": true,
-  "description": "Heyarr Tizen TV/wall client (.wgt) — QR login via heyarr's weblogin.Broker, library browse + playback over the M11 Subsonic /rest compat surface, consuming @rarebit-one/voidbind-web. Sibling of heyarr-mobile.",
+  "description": "Heyarr Tizen TV/wall client (.wgt) — QR login via heyarr's weblogin.Broker, library browse + playback over the M11 Subsonic /rest compat surface, consuming @rarebit-one/voidbind-web. Sibling of heyarr-kmp (:androidApp).",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "author": "Rarebit One",
