@@ -4,8 +4,9 @@ The **Heyarr Tizen TV/wall client** — a Samsung Tizen `.wgt` web app that a
 credential-less television uses to sign in to a heyarr node by **QR** and then
 **browse and play** the library on the big screen.
 
-Sibling of [`heyarr-mobile`](https://github.com/rarebit-one/heyarr-mobile) (the
-Android first-party client). Where the phone holds a device key, a TV holds
+Sibling of [`heyarr-kmp`](https://github.com/rarebit-one/heyarr-kmp) (the
+first-party client; its `:androidApp` is the Android app that superseded
+`heyarr-mobile`). Where the phone holds a device key, a TV holds
 neither a heyarr token nor a device key, so it authenticates the way a browser
 does: it shows a Voidbind QR that an enrolled phone approves.
 
@@ -120,7 +121,13 @@ remembered in `localStorage`) is the one knob.
 npm install     # installs @rarebit-one/voidbind-web (public git dep, pinned by SHA)
 npm test        # node --test — validates config.xml, then the subsonic contract
 npm run build   # stage + vendor voidbind-web + zip → dist/heyarr-tizen.wgt
+npm run build -- --dev   # dev-only: package even without voidbind-web (no login)
 ```
+
+`npm run build` **fails** if `@rarebit-one/voidbind-web` is not installed
+(`npm install` first). Without it the `.wgt` has no login module and can never
+sign in. `--dev` downgrades that to a warning for a UI-only dev build. Never ship
+a `--dev` `.wgt`.
 
 `npm test` is the CI merge gate. It runs `scripts/validate-config.mjs` (a
 presence check over `config.xml`) then the unit tests, which pin the Subsonic

@@ -10,6 +10,10 @@
 // with a Tizen author+distributor certificate via the Tizen CLI
 // (`tizen package -t wgt -s <profile>`); see README "Deploy". CI only needs to
 // prove the tree assembles and packages, which this does.
+//
+// Fails if @rarebit-one/voidbind-web is not installed: without it the .wgt has
+// no login module and cannot sign in. Pass `--dev` (`npm run build -- --dev`)
+// to package anyway, for a UI-only dev build.
 
 import { cp, mkdir, rm, readdir, access } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +26,7 @@ const stage = join(dist, 'app');
 const wgt = join(dist, 'heyarr-tizen.wgt');
 
 const exists = (p) => access(p).then(() => true, () => false);
+const dev = process.argv.slice(2).includes('--dev');
 
 async function main() {
   await rm(dist, { recursive: true, force: true });
@@ -43,9 +48,13 @@ async function main() {
     await mkdir(dirname(vbDst), { recursive: true });
     await cp(vbSrc, vbDst, { recursive: true });
     console.log('· vendored voidbind-web from node_modules');
+  } else if (dev) {
+    console.warn('! @rarebit-one/voidbind-web not installed — --dev: packaging WITHOUT the login module.');
+    console.warn('  This .wgt cannot sign in; do not ship it.');
   } else {
-    console.warn('! @rarebit-one/voidbind-web not installed — run `npm install` first.');
-    console.warn('  The .wgt will package without the login module (dev-only build).');
+    console.error('✗ @rarebit-one/voidbind-web not installed — run `npm install` first.');
+    console.error('  Refusing to package a .wgt with no login module (pass --dev for a UI-only dev build).');
+    process.exit(1);
   }
 
   // Zip the staged tree with config.xml at the archive root.
