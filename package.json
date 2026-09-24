@@ -17,7 +17,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@rarebit-one/voidbind-web": "git+https://github.com/rarebit-one/voidbind-web.git#a0f356eae968f4196f8afc34a130ca0232c9f4c5"
+    "@rarebit-one/voidbind-web": "git+https://github.com/rarebit-one/voidbind-web.git#ca0b4d12ac2647cc416db5535d405767a2f0c4c1"
   },
   "engines": {
     "node": ">=18"
