@@ -21,8 +21,10 @@
         <input id="base-url" type="url" inputmode="url" autocomplete="off"
                placeholder="https://heyarr.local">
         <button id="sign-in" type="button">Sign in with QR</button>
+        <button id="browse-guest" type="button" class="secondary">Browse as guest</button>
         <p class="hint">Scan the code with the phone that holds your Voidbind key.
-          No password is typed on the TV.</p>
+          No password is typed on the TV. Guest access is available only when the
+          Heyarr server enables it for this network.</p>
       </div>
     </div>
   </section>
@@ -104,6 +106,7 @@
       <span id="np-title" class="np-title"></span>
       <button id="np-close" type="button" class="np-close">Close</button>
     </div>
+    <p id="playback-status" class="status" hidden></p>
     <audio id="audio-player" class="player" controls hidden></audio>
     <video id="video-player" class="player" controls hidden></video>
   </div>

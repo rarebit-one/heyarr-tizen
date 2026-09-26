@@ -1,8 +1,8 @@
 # heyarr-tizen
 
 The **Heyarr Tizen TV/wall client** — a Samsung Tizen `.wgt` web app that a
-credential-less television uses to sign in to a heyarr node by **QR** and then
-**browse and play** the library on the big screen.
+television uses to connect to a heyarr node by **QR sign-in or guest access**,
+then **browse and play** the library on the big screen.
 
 Sibling of [`heyarr-kmp`](https://github.com/rarebit-one/heyarr-kmp) (the
 first-party client; its `:androidApp` is the Android app that superseded
@@ -11,6 +11,14 @@ neither a heyarr token nor a device key, so it authenticates the way a browser
 does: it shows a Voidbind QR that an enrolled phone approves.
 
 ## How it works
+
+The TV can also browse without signing in when the server enables guest access
+and the TV's network address is inside its trusted guest boundary. Guest mode
+uses the native `/api/v1` API for shared-library browsing and playback; it does
+not use `/rest` and does not receive a user credential. Playback needs an
+existing server device profile so Heyarr can choose a compatible stream. The TV
+prefers a profile whose platform is `tizen`, then falls back to the first listed
+profile. Search, follows, and per-user state stay hidden in guest mode.
 
 ```
 ┌─────────────┐   1. POST /login          ┌──────────────────────┐
@@ -46,6 +54,11 @@ does: it shows a Voidbind QR that an enrolled phone approves.
    (`POST` / `GET` / `DELETE /api/v1/followed-sources`). Unlike `/rest`, these
    carry the QR session token as an **`Authorization: Bearer <token>`** header
    (heyarr-core `auth.go`, ADR-0053) — see the finding below.
+5. **Guest access** — the sign-in screen checks `GET /api/v1/system` before
+   entering guest mode. When enabled, the TV reads `/api/v1/works` and each
+   selected work's `/assets`, then starts `POST /api/v1/playback` without an
+   Authorization header. The player uses the short-lived `render_url` returned
+   for clients that cannot attach credentials to media requests.
 
 The whole app is framework-free ESM with **no bundler and no CDN** (ADR-0001
 self-hosted): `voidbind-web` is vendored into the `.wgt` at build time.

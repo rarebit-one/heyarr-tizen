@@ -27,6 +27,8 @@ const state = {
   user: null,
   client: null,     // Subsonic /rest browse+stream client
   api: null,        // heyarr native /api/v1 client (search + follow)
+  guest: false,     // credential-less native browse/play on a trusted network
+  guestDevice: null, // an existing native playback capability profile
   activeTab: 'library',
   followTarget: null, // the search result a pending Follow is about
   canWrite: null,   // GET /session ⇒ can_write; null until read, false = read-only TV
@@ -55,6 +57,7 @@ async function startLogin() {
     });
 
     state.token = token;
+    state.guest = false;
     state.user = user && (user.name || user.id || user) || 'heyarr';
     state.client = makeClient({ baseUrl, creds: { user: state.user, token } });
     // The native /api/v1 client carries the SAME session token as a Bearer
@@ -67,6 +70,33 @@ async function startLogin() {
       .then((s) => { state.canWrite = !!(s && s.can_write); })
       .catch(() => { /* unknown authority → leave null, no proactive notice */ });
 
+    await enterLibrary();
+  } catch (err) {
+    showLoginError(err && err.message ? err.message : String(err));
+  }
+}
+
+async function startGuest() {
+  const baseUrl = ($('base-url') && $('base-url').value.trim()) || state.baseUrl;
+  state.baseUrl = baseUrl;
+  saveBaseUrl(baseUrl);
+  hide($('login-error'));
+  setStatus('Checking guest access …');
+
+  try {
+    const api = makeApiClient({ baseUrl });
+    const system = await api.system();
+    if (!system || !system.guest || !system.guest.enabled) {
+      throw new Error('Guest browsing is disabled on this Heyarr server.');
+    }
+    const devices = await api.devices();
+    state.guestDevice = devices.find((d) => String(d.platform || '').toLowerCase().includes('tizen')) || devices[0] || null;
+    state.token = null;
+    state.user = 'Guest';
+    state.client = null;
+    state.api = api;
+    state.guest = true;
+    state.canWrite = false;
     await enterLibrary();
   } catch (err) {
     showLoginError(err && err.message ? err.message : String(err));
@@ -90,6 +120,10 @@ async function enterLibrary() {
   hide($('view-login'));
   show($('view-library'));
   $('who') && ($('who').textContent = state.user ? ('Signed in as ' + state.user) : 'Signed in');
+  if (state.guest) {
+    hide($('tab-search'));
+    hide($('tab-followed'));
+  }
   await loadAlbums();
 }
 
@@ -97,10 +131,57 @@ async function loadAlbums() {
   const list = $('album-list');
   if (list) list.innerHTML = '<li class="loading">Loading library …</li>';
   try {
+    if (state.guest) {
+      const works = await state.api.works({ include: 'artwork,primary_asset', limit: 200 });
+      renderGuestWorks(works);
+      return;
+    }
     const albums = await state.client.getAlbumList({ type: 'alphabeticalByName', size: 200 });
     renderAlbums(albums);
   } catch (err) {
     if (list) list.innerHTML = '<li class="error">Could not load library: ' + esc(err.message) + '</li>';
+  }
+}
+
+function renderGuestWorks(works) {
+  const list = $('album-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!works.length) { list.innerHTML = '<li class="empty">The shared library is empty.</li>'; return; }
+  works.forEach((work, i) => {
+    const li = document.createElement('li');
+    li.className = 'album';
+    li.tabIndex = i === 0 ? 0 : -1;
+    li.dataset.workId = work.id;
+    const sub = [work.content_type, work.year].filter(Boolean).join(' · ');
+    li.innerHTML = '<span class="album-name">' + esc(work.title || '(untitled)') + '</span>' +
+      (sub ? '<span class="album-sub">' + esc(sub) + '</span>' : '');
+    li.addEventListener('click', () => openGuestWork(work));
+    li.addEventListener('keydown', (e) => { if (e.key === 'Enter') openGuestWork(work); });
+    list.appendChild(li);
+  });
+  const first = list.querySelector('.album');
+  if (first) first.focus();
+}
+
+async function openGuestWork(work) {
+  const panel = $('album-detail');
+  const songs = $('song-list');
+  if (panel) panel.hidden = false;
+  $('album-title') && ($('album-title').textContent = work.title || 'Library item');
+  if (songs) songs.innerHTML = '<li class="loading">Loading playable files …</li>';
+  try {
+    const assets = await state.api.workAssets(work.id);
+    const playable = assets.filter((asset) => /^(audio|video)\//i.test(asset.mime || ''));
+    renderSongs(playable.map((asset) => ({
+      id: asset.id,
+      title: asset.title || asset.filename || asset.role || work.title || 'Media',
+      contentType: asset.mime,
+      assetId: asset.id,
+    })));
+    if (!playable.length && songs) songs.innerHTML = '<li class="empty">This item has no audio or video files.</li>';
+  } catch (err) {
+    if (songs) songs.innerHTML = '<li class="error">Could not load files: ' + esc(err.message) + '</li>';
   }
 }
 
@@ -370,8 +451,34 @@ const setFollowedStatus = (t) => setPanelStatus('followed-status', t);
 
 // ---- player ----------------------------------------------------------------
 
-function play(song) {
-  const url = state.client.streamUrl(song.id);
+async function play(song) {
+  let url;
+  if (state.guest) {
+    if (!state.guestDevice) {
+      show($('now-playing'));
+      setPlaybackStatus('Playback needs a device profile already registered on this Heyarr server.');
+      return;
+    }
+    setPlaybackStatus('Preparing playback …');
+    show($('now-playing'));
+    try {
+      const started = await state.api.startPlayback({
+        assetId: song.assetId || song.id,
+        deviceId: state.guestDevice.id,
+        verb: (song.contentType || '').startsWith('video/') ? 'watch' : 'listen',
+      });
+      if (!started || !started.render_url) {
+        throw new Error((started && started.render_unavailable) || 'The server did not provide a TV playback URL.');
+      }
+      url = started.render_url;
+    } catch (err) {
+      setPlaybackStatus('Could not start playback: ' + (err && err.message ? err.message : String(err)));
+      return;
+    }
+  } else {
+    url = state.client.streamUrl(song.id);
+  }
+  setPlaybackStatus('');
   // Video content types get the <video> element; everything else is audio.
   const isVideo = (song.contentType || '').startsWith('video/') || (song.type === 'video');
   const audio = $('audio-player');
@@ -388,6 +495,11 @@ function play(song) {
     const p = player.play && player.play();
     if (p && p.catch) p.catch(() => { /* autoplay may be gated; the controls remain */ });
   }
+}
+
+function setPlaybackStatus(text) {
+  const el = $('playback-status');
+  if (el) { el.textContent = text || ''; el.hidden = !text; }
 }
 
 // ---- utilities -------------------------------------------------------------
@@ -412,6 +524,8 @@ function boot() {
   if (input) input.value = state.baseUrl;
   const btn = $('sign-in');
   if (btn) btn.addEventListener('click', startLogin);
+  const guestBtn = $('browse-guest');
+  if (guestBtn) guestBtn.addEventListener('click', startGuest);
 
   // Tabs.
   $('tab-library') && $('tab-library').addEventListener('click', () => switchTab('library'));
@@ -448,6 +562,7 @@ function closeNowPlaying() {
     const el = $(id);
     if (el) { el.pause && el.pause(); el.hidden = true; el.removeAttribute('src'); }
   });
+  setPlaybackStatus('');
   hide($('now-playing'));
 }
 
