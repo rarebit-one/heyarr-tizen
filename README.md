@@ -130,6 +130,30 @@ remembered in `localStorage`) is the one knob.
 
 ## Develop
 
+### Dev container
+
+Open this repository in a Dev Container to get Node.js 22, Java 21, `zip`, and
+`unzip`. The container runs `npm ci` when it is created and supports the normal
+app workflow:
+
+```
+npm test
+npm run build
+```
+
+The build produces an unsigned `.wgt`. The container intentionally does not
+install Tizen Studio or hold Samsung signing keys. Install Tizen Studio and its
+TV and Samsung Certificate extensions on an Ubuntu host, then create the
+certificate profile there. Keep the profile and passwords outside the
+repository. Samsung's [TV SDK installation guide](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)
+and [TV CLI guide](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/command-line-interface.html)
+cover setup and the package/install commands below. The container does not
+include the Tizen CLI. Build output stays in the shared repository `dist/`
+directory; use the Tizen CLI from the configured host shell to sign and sideload
+it.
+
+### Local Node workflow
+
 ```
 npm install     # installs @rarebit-one/voidbind-web (public git dep, pinned by SHA)
 npm test        # node --test — validates config.xml, then the subsonic contract
@@ -150,18 +174,24 @@ browse payload shapes) with a stub `fetch`.
 ## Deploy (dev-cert sideload to a TV)
 
 The `.wgt` `npm run build` produces is **unsigned**. To sideload onto a real
-Samsung TV you sign it with a Tizen author + distributor certificate and push
-it over the network with the Tizen CLI:
+Samsung TV, create a Samsung TV certificate profile in Tizen Studio's
+**Tools → Certificate Manager**. The profile needs an author certificate and a
+distributor certificate containing the target TV's DUID. Back up the author
+certificate securely; future updates must use the same author certificate.
+Samsung's [certificate guide](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/creating-certificates.html)
+has the full wizard steps.
+
+Run the following from an Ubuntu host shell where the Tizen TV SDK and
+certificate profile are configured (outside the dev container):
 
 ```
-# one-time: create a dev certificate profile
-tizen certificate -a heyarr -p <pw> -f heyarr-author -o certs/
-tizen security-profiles add -n heyarr -a certs/heyarr-author.p12 -p <pw>
+# The profile name is shown in Certificate Manager.
+tizen package -t wgt -s heyarr-dev -- dist/app
 
 # put the TV in Developer Mode (Apps → 12345 → set host IP), then:
 sdb connect <tv-ip>
-tizen package -t wgt -s heyarr -- dist/app         # sign the staged tree
-tizen install  -n heyarr-tizen.wgt -t <tv-name>    # sideload
+sdb devices
+tizen install -t <target> --name heyarr-tizen.wgt -- dist
 ```
 
 Set the heyarr server URL on the sign-in screen (it is remembered per TV), or

@@ -3,3 +3,4 @@ dist/
 *.wgt
 *.log
 .DS_Store
+.worktrees/
