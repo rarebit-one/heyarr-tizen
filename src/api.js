@@ -103,6 +103,39 @@ export function makeApiClient({ baseUrl, token, fetchImpl }) {
   }
 
   return {
+    // Guest-mode capability and library reads use the native API too. A guest
+    // client has no token: heyarr admits the request only when guest browsing
+    // is enabled and the source is inside the configured trust boundary.
+    async system() {
+      return request('GET', '/system');
+    },
+
+    async works({ contentType, include = 'artwork,primary_asset', limit = 200, cursor } = {}) {
+      const q = new URLSearchParams();
+      if (contentType) q.set('content_type', contentType);
+      if (include) q.set('include', include);
+      if (limit != null) q.set('limit', String(limit));
+      if (cursor) q.set('cursor', cursor);
+      const r = await request('GET', '/works?' + q.toString());
+      return (r && r.items) || [];
+    },
+
+    async workAssets(workId) {
+      const r = await request('GET', '/works/' + encodeURIComponent(workId) + '/assets');
+      return (r && r.items) || [];
+    },
+
+    async devices() {
+      const r = await request('GET', '/devices');
+      return (r && r.items) || [];
+    },
+
+    async startPlayback({ assetId, deviceId, verb } = {}) {
+      return request('POST', '/playback', {
+        body: { asset_id: assetId, device_id: deviceId, ...(verb ? { verb } : {}) },
+      });
+    },
+
     // Content-intent search (POST /api/v1/search). Source-agnostic: the caller
     // gives what a work IS (a query and/or a content_type), never which service
     // to ask. Returns the `works` array ([] when the body omits it).

@@ -197,3 +197,35 @@ test('a missing token yields no Authorization header (loopback dev with auth dis
   await client.search({ query: 'x' });
   assert.equal(calls[0].headers.Authorization, undefined);
 });
+
+// --- credential-less guest browse + playback --------------------------------
+
+test('guest capability, library, assets, and devices use the native API without credentials', async () => {
+  const { fetchImpl, calls } = stubFetch((req) => {
+    if (new URL(req.url).pathname.endsWith('/system')) return { body: { guest: { enabled: true } } };
+    if (new URL(req.url).pathname.endsWith('/works')) return { body: { items: [{ id: 'w1' }] } };
+    if (new URL(req.url).pathname.endsWith('/works/w1/assets')) return { body: { items: [{ id: 'a1' }] } };
+    return { body: { items: [{ id: 'd1', platform: 'tizen' }] } };
+  });
+  const client = makeApiClient({ baseUrl: BASE, fetchImpl });
+
+  assert.deepEqual(await client.system(), { guest: { enabled: true } });
+  assert.deepEqual(await client.works({ contentType: 'movie' }), [{ id: 'w1' }]);
+  assert.deepEqual(await client.workAssets('w1'), [{ id: 'a1' }]);
+  assert.deepEqual(await client.devices(), [{ id: 'd1', platform: 'tizen' }]);
+  assert.equal(new URL(calls[1].url).searchParams.get('include'), 'artwork,primary_asset');
+  assert.equal(new URL(calls[2].url).pathname, '/api/v1/works/w1/assets');
+  assert.ok(calls.every((req) => req.headers.Authorization === undefined));
+});
+
+test('guest playback opens through the native API and returns the capability URL', async () => {
+  const { fetchImpl, calls } = stubFetch(() => ({ status: 201, body: {
+    session_id: 's1', render_url: 'https://heyarr.example/render/one-time-capability',
+  } }));
+  const client = makeApiClient({ baseUrl: BASE, fetchImpl });
+  const started = await client.startPlayback({ assetId: 'a1', deviceId: 'd1' });
+  assert.equal(calls[0].method, 'POST');
+  assert.deepEqual(calls[0].body, { asset_id: 'a1', device_id: 'd1' });
+  assert.equal(started.render_url, 'https://heyarr.example/render/one-time-capability');
+  assert.equal(calls[0].headers.Authorization, undefined);
+});
